@@ -1,0 +1,2093 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Nana Cheese Oracle</title>
+  <meta name="description" content="A full-screen Mother’s Day boardwalk fortune machine for Nana, ruled by Dexter and Nana Cheese.">
+  <style>
+    :root {
+      --cream: #fff2c8;
+      --paper: #fff7d9;
+      --paper-deep: #efd58f;
+      --ink: #2a2017;
+      --brown: #5e351e;
+      --brown-deep: #2d1b10;
+      --teal: #146c78;
+      --teal-deep: #074554;
+      --coral: #bf4b37;
+      --gold: #f3c85b;
+      --gold-hot: #ffe68b;
+      --stamp: #aa2f28;
+      --focus: #77fff3;
+      --shadow: rgba(20, 26, 32, 0.32);
+      color-scheme: light;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0a3543;
+      color: var(--ink);
+    }
+
+    body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+
+    @supports (height: 100dvh) {
+      html, body { height: 100dvh; }
+    }
+
+    @supports (height: 100svh) {
+      html, body { min-height: 100svh; }
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    [role="button"] { font: inherit; }
+
+    .app {
+      position: fixed;
+      inset: 0;
+      min-height: 100svh;
+      min-height: 100dvh;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 231, 150, 0.20), transparent 38%),
+        linear-gradient(180deg, #0f6680, #0b3344 62%, #27180f);
+    }
+
+    .scene-backdrop {
+      position: absolute;
+      inset: -42px;
+      z-index: 0;
+      background-image: var(--backdrop-image);
+      background-size: cover;
+      background-position: center;
+      filter: blur(18px) saturate(1.18) brightness(0.88);
+      transform: scale(1.08);
+      opacity: 0.56;
+      transition: opacity 420ms ease, background-image 280ms ease;
+      pointer-events: none;
+    }
+
+    .app[data-state="ocean"] .scene-backdrop { opacity: 0.24; }
+
+    .scene-media {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: var(--object-position, center center);
+      opacity: 0;
+      transition: opacity 420ms ease, filter 420ms ease, transform 900ms ease;
+      transform: translate3d(0, 0, 0) scale(1);
+      transform-origin: 50% 50%;
+      user-select: none;
+      pointer-events: none;
+      background: transparent;
+    }
+
+    .app[data-fit="contain"] .scene-media { object-fit: contain; }
+    .scene-media.is-visible { opacity: 1; }
+
+    .texture-preserver {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 38%, rgba(7, 31, 42, 0.16) 100%),
+        linear-gradient(90deg, rgba(19, 48, 52, 0.16), transparent 24%, transparent 74%, rgba(24, 36, 33, 0.17));
+      mix-blend-mode: multiply;
+      opacity: 0.42;
+    }
+
+    .localized-glow {
+      position: absolute;
+      z-index: 5;
+      left: 50%;
+      top: 55%;
+      width: min(28vmin, 240px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(130, 255, 246, 0.42), rgba(255, 231, 139, 0.16) 35%, transparent 68%);
+      transform: translate(-50%, -50%) scale(0.8);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .app[data-state="waking"] .localized-glow,
+    .app[data-state="consulting"] .localized-glow,
+    .app[data-state="dispensing"] .localized-glow {
+      animation: localizedGlow 1250ms ease-in-out infinite alternate;
+    }
+
+    .intro-plaque {
+      position: absolute;
+      z-index: 12;
+      left: clamp(12px, 3vw, 38px);
+      top: clamp(12px, 3vw, 34px);
+      width: min(470px, calc(100vw - 24px));
+      padding: clamp(13px, 2vw, 19px) clamp(14px, 2.4vw, 22px);
+      border: 3px solid rgba(92, 48, 25, 0.86);
+      border-radius: 18px 24px 16px 22px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 42%),
+        rgba(255, 245, 205, 0.68);
+      box-shadow: 0 18px 35px rgba(19, 26, 32, 0.22), 4px 5px 0 rgba(71, 39, 18, 0.18);
+      transform: rotate(-1.2deg);
+      transition: opacity 360ms ease, transform 360ms ease;
+      pointer-events: none;
+      backdrop-filter: blur(2px);
+    }
+
+    .app:not([data-state="ocean"]) .intro-plaque {
+      opacity: 0;
+      transform: translateY(-12px) rotate(-1.2deg) scale(0.96);
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: #813728;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.77rem;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: #163449;
+      font-size: clamp(2.18rem, 7vw, 5.25rem);
+      line-height: 0.9;
+      letter-spacing: -0.03em;
+      text-shadow: 2px 2px 0 var(--gold);
+    }
+
+    .subtitle,
+    .sacred-phrase,
+    .hotspot-sub,
+    .status-note,
+    .energy-gauge,
+    .fortune-slip,
+    .approval-stamp,
+    .reset-button,
+    .file-note {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .subtitle {
+      margin: 11px 0 9px;
+      max-width: 31rem;
+      color: #183042;
+      font-size: clamp(0.98rem, 2.2vw, 1.16rem);
+      line-height: 1.34;
+      font-weight: 800;
+    }
+
+    .sacred-phrase {
+      display: inline-block;
+      margin: 0;
+      padding: 7px 11px;
+      border: 2px solid rgba(92, 48, 25, 0.78);
+      border-radius: 999px;
+      background: #ffe38e;
+      color: #4a250f;
+      font-size: 0.94rem;
+      font-weight: 1000;
+      box-shadow: 2px 2px 0 rgba(92, 48, 25, 0.22);
+    }
+
+    .status-note {
+      position: absolute;
+      z-index: 12;
+      left: clamp(10px, 2vw, 22px);
+      bottom: calc(28px + env(safe-area-inset-bottom));
+      max-width: min(560px, calc(100vw - 24px));
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 242, 200, 0.34);
+      border-radius: 999px;
+      background: rgba(18, 31, 34, 0.42);
+      color: rgba(255, 248, 218, 0.96);
+      font-size: 0.82rem;
+      font-weight: 900;
+      line-height: 1.25;
+      text-shadow: 0 2px 7px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      transition: opacity 220ms ease;
+    }
+
+    .app[data-state="ocean"] .status-note { opacity: 0.78; }
+
+    .main-hotspot {
+      --hotspot-x: 68%;
+      --hotspot-y: 72%;
+      --label-left: -226px;
+      --label-top: -10px;
+      --arrow-side: right;
+      position: absolute;
+      z-index: 20;
+      left: var(--hotspot-x);
+      top: var(--hotspot-y);
+      width: 58px;
+      height: 58px;
+      min-width: 58px;
+      min-height: 58px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: #3c2112;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: opacity 220ms ease, transform 180ms ease, filter 180ms ease;
+    }
+
+    .main-hotspot[hidden] { display: none !important; }
+
+    .main-hotspot:disabled {
+      cursor: wait;
+      opacity: 0.55;
+      filter: grayscale(0.18);
+    }
+
+    .main-hotspot::before,
+    .main-hotspot::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .main-hotspot::before {
+      width: 56px;
+      height: 56px;
+      border: 3px solid rgba(255, 236, 156, 0.98);
+      box-shadow: 0 0 0 8px rgba(255, 217, 89, 0.14), 0 0 22px rgba(255, 230, 130, 0.60);
+      animation: pulseRing 1300ms ease-in-out infinite;
+    }
+
+    .main-hotspot::after {
+      width: 18px;
+      height: 18px;
+      background: radial-gradient(circle, #fffad7 0 24%, #f3c85b 26% 100%);
+      border: 2px solid rgba(75, 37, 16, 0.76);
+      box-shadow: 0 2px 0 rgba(48, 24, 10, 0.22);
+    }
+
+    .main-hotspot:focus-visible {
+      outline: 0;
+    }
+
+    .main-hotspot:focus-visible::before {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 7px rgba(119, 255, 243, 0.26), 0 0 0 12px rgba(255, 242, 200, 0.22);
+    }
+
+    .main-hotspot:hover:not(:disabled) { filter: brightness(1.05); }
+    .main-hotspot:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.96); }
+
+    .hotspot-label {
+      position: absolute;
+      left: var(--label-left);
+      top: var(--label-top);
+      width: max-content;
+      max-width: min(230px, 60vw);
+      padding: 9px 12px 8px;
+      border: 2px solid rgba(92, 48, 25, 0.88);
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 38%),
+        rgba(255, 242, 194, 0.72);
+      box-shadow: 0 10px 18px rgba(10, 12, 16, 0.16), 2px 3px 0 rgba(78, 42, 18, 0.18);
+      color: #3c2112;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.94rem;
+      font-weight: 1000;
+      line-height: 1.05;
+      text-align: left;
+      transform: rotate(-1.5deg);
+      text-shadow: none;
+    }
+
+    .hotspot-label::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 34px;
+      height: 3px;
+      background: rgba(255, 236, 156, 0.96);
+      box-shadow: 0 0 0 1px rgba(92, 48, 25, 0.36), 0 0 11px rgba(255, 236, 156, 0.72);
+    }
+
+    .hotspot-label[data-arrow="right"]::after {
+      right: -36px;
+      transform: translateY(-50%);
+    }
+
+    .hotspot-label[data-arrow="left"]::after {
+      left: -36px;
+      transform: translateY(-50%);
+    }
+
+    .hotspot-label strong { display: block; }
+
+    .hotspot-sub {
+      display: block;
+      margin-top: 4px;
+      color: rgba(64, 35, 17, 0.78);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .app[data-state="ocean"] .main-hotspot {
+      --hotspot-x: 68%;
+      --hotspot-y: 73%;
+      --label-left: -230px;
+      --label-top: -12px;
+    }
+
+    .app[data-state="machineOff"] .main-hotspot {
+      --hotspot-x: 50%;
+      --hotspot-y: 67%;
+      --label-left: 62px;
+      --label-top: -12px;
+    }
+
+    .app[data-state="machineOff"] .hotspot-label[data-arrow="right"]::after {
+      left: -36px;
+      right: auto;
+    }
+
+    .app[data-state="ready"] .main-hotspot,
+    .app[data-state="unlocked"] .main-hotspot {
+      --hotspot-x: 50%;
+      --hotspot-y: 56.5%;
+      --label-left: 62px;
+      --label-top: -11px;
+    }
+
+    .app[data-state="ready"] .hotspot-label[data-arrow="right"]::after,
+    .app[data-state="unlocked"] .hotspot-label[data-arrow="right"]::after {
+      left: -36px;
+      right: auto;
+    }
+
+    .energy-gauge {
+      position: absolute;
+      z-index: 14;
+      left: var(--gauge-x, calc(50% + min(29vw, 310px)));
+      top: var(--gauge-y, 21%);
+      width: min(268px, calc(100vw - 24px));
+      padding: 10px 12px 11px;
+      border: 3px solid rgba(77, 43, 20, 0.62);
+      border-radius: 15px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 34%),
+        linear-gradient(180deg, rgba(247, 214, 140, 0.74), rgba(215, 155, 68, 0.64));
+      backdrop-filter: blur(1.5px);
+      box-shadow: 0 11px 20px rgba(13, 16, 19, 0.22), inset 0 0 0 2px rgba(255, 247, 205, 0.35);
+      color: #3c2112;
+      transform: translate(-50%, -50%) rotate(2deg);
+      transition: opacity 260ms ease, transform 260ms ease;
+    }
+
+    .app[data-state="ocean"] .energy-gauge,
+    .app[data-state="approach"] .energy-gauge,
+    .app[data-state="waking"] .energy-gauge {
+      opacity: 0;
+      transform: translate(-50%, -44%) rotate(2deg) scale(0.92);
+      pointer-events: none;
+    }
+
+    .energy-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+      margin: 0 0 7px;
+      font-size: 0.76rem;
+      font-weight: 1000;
+      line-height: 1.1;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .energy-count { white-space: nowrap; color: #6b2c1b; }
+
+    .energy-bulbs {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      padding: 6px;
+      border: 2px solid rgba(71, 38, 15, 0.34);
+      border-radius: 999px;
+      background: rgba(76, 42, 16, 0.18);
+    }
+
+    .energy-bulbs span {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid rgba(58, 32, 13, 0.58);
+      background: radial-gradient(circle at 40% 30%, rgba(255, 246, 207, 0.22), rgba(101, 70, 37, 0.88) 70%);
+      box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.16);
+      transition: background 260ms ease, box-shadow 260ms ease, transform 260ms ease;
+    }
+
+    .energy-bulbs span.is-active {
+      background: radial-gradient(circle at 40% 30%, #fff8bd 0 26%, #ffd85a 38%, #d9782b 78%);
+      box-shadow: 0 0 10px rgba(255, 218, 84, 0.78), inset 0 1px 2px rgba(255, 255, 255, 0.42);
+      transform: scale(1.08);
+    }
+
+    .fortune-slip {
+      position: absolute;
+      z-index: 18;
+      left: var(--slip-x, 50%);
+      top: var(--slip-y, 78%);
+      width: min(540px, calc(100vw - 28px));
+      max-height: min(33svh, 230px);
+      overflow: auto;
+      padding: 23px 24px 20px;
+      border: 3px solid rgba(83, 42, 18, 0.70);
+      border-radius: 11px;
+      background:
+        radial-gradient(circle at 8% 12%, rgba(122, 70, 28, 0.12), transparent 20%),
+        repeating-linear-gradient(90deg, rgba(122, 70, 28, 0.08) 0 1px, transparent 1px 18px),
+        linear-gradient(180deg, rgba(255, 247, 217, 0.88), rgba(244, 223, 170, 0.82));
+      backdrop-filter: blur(1.5px);
+      box-shadow: 0 17px 30px rgba(9, 12, 16, 0.34), 0 0 0 6px rgba(255, 244, 202, 0.18);
+      transform: translate(-50%, -18px) scaleY(0.22);
+      transform-origin: top center;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .fortune-slip::before {
+      content: "OUTLOOK HERE";
+      position: absolute;
+      left: 50%;
+      top: -19px;
+      transform: translateX(-50%);
+      padding: 3px 9px;
+      border: 2px solid rgba(69, 37, 16, 0.76);
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      background: #563119;
+      color: #fff2c8;
+      font-size: 0.66rem;
+      font-weight: 1000;
+      letter-spacing: 0.08em;
+    }
+
+    .fortune-slip.is-visible {
+      animation: dispenseTicket 780ms cubic-bezier(.18, .92, .2, 1.12) forwards;
+      pointer-events: auto;
+    }
+
+    .fortune-slip strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--teal-deep);
+      font-size: 0.78rem;
+      font-weight: 1000;
+      letter-spacing: 0.13em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .fortune-slip span {
+      display: block;
+      color: #291c12;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.02rem, 2.2vw, 1.36rem);
+      font-weight: 800;
+      line-height: 1.26;
+    }
+
+    .app[data-empty-fortune="true"] .fortune-slip { display: none; }
+
+    .approval-stamp {
+      position: absolute;
+      z-index: 19;
+      left: var(--stamp-x, calc(50% + min(24vw, 245px)));
+      top: var(--stamp-y, 70%);
+      width: min(260px, calc(100vw - 34px));
+      padding: 14px 15px 15px;
+      border: 5px double rgba(170, 47, 40, 0.92);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.72), transparent 32%),
+        rgba(255, 246, 215, 0.72);
+      color: var(--stamp);
+      box-shadow: 0 15px 25px rgba(10, 14, 18, 0.30), inset 0 0 0 2px rgba(170, 47, 40, 0.12);
+      transform: translate(-50%, -50%) rotate(-8deg) scale(0.72);
+      opacity: 0;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .approval-stamp.is-visible {
+      animation: stampThunk 620ms cubic-bezier(.18, 1.18, .34, 1) forwards;
+    }
+
+    .approval-stamp b {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.86rem;
+      font-weight: 1000;
+      letter-spacing: 0.07em;
+      line-height: 1.05;
+      text-transform: uppercase;
+    }
+
+    .approval-stamp span {
+      display: block;
+      color: #4a211c;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 0.92rem;
+      font-weight: 800;
+      line-height: 1.22;
+    }
+
+    .reset-button {
+      position: absolute;
+      z-index: 24;
+      top: calc(10px + env(safe-area-inset-top));
+      right: calc(10px + env(safe-area-inset-right));
+      min-height: 38px;
+      padding: 8px 11px;
+      border: 2px solid rgba(255, 242, 200, 0.46);
+      border-radius: 999px;
+      background: rgba(19, 30, 34, 0.22);
+      color: rgba(255, 248, 218, 0.94);
+      font-size: 0.78rem;
+      font-weight: 1000;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.54);
+      cursor: pointer;
+      opacity: 0.62;
+      transition: opacity 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .reset-button:hover { opacity: 1; background: rgba(19, 30, 34, 0.42); }
+    .reset-button:active { transform: translateY(1px); }
+    .reset-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+    .file-note {
+      position: absolute;
+      z-index: 12;
+      right: calc(12px + env(safe-area-inset-right));
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      color: rgba(255, 248, 218, 0.86);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.66);
+      pointer-events: none;
+    }
+
+
+
+    .scene-transition-flash {
+      position: absolute;
+      inset: 0;
+      z-index: 11;
+      pointer-events: none;
+      opacity: 0;
+      mix-blend-mode: screen;
+      background:
+        radial-gradient(circle at var(--flash-x, 50%) var(--flash-y, 56%), rgba(255, 248, 188, 0.92), rgba(255, 229, 120, 0.36) 22%, transparent 54%),
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+    }
+
+    .app.is-flashing .scene-transition-flash {
+      animation: sceneFlash 520ms ease-out both;
+    }
+
+    .app[data-camera="push"] .scene-media.is-visible { animation: cameraPush 5200ms ease-in-out both; }
+    .app[data-camera="drift-left"] .scene-media.is-visible { animation: cameraDriftLeft 6200ms ease-in-out both; }
+    .app[data-camera="drift-right"] .scene-media.is-visible { animation: cameraDriftRight 6200ms ease-in-out both; }
+    .app[data-camera="settle"] .scene-media.is-visible { animation: cameraSettle 1800ms ease-out both; }
+    .app[data-camera="consult-close"] .scene-media.is-visible { animation: cameraConsultClose 4400ms ease-in-out both; }
+
+    .sound-button {
+      position: absolute;
+      z-index: 24;
+      top: calc(10px + env(safe-area-inset-top));
+      right: calc(82px + env(safe-area-inset-right));
+      min-height: 38px;
+      padding: 8px 11px;
+      border: 2px solid rgba(255, 242, 200, 0.38);
+      border-radius: 999px;
+      background: rgba(19, 30, 34, 0.20);
+      color: rgba(255, 248, 218, 0.88);
+      font-size: 0.78rem;
+      font-weight: 1000;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.48);
+      cursor: pointer;
+      opacity: 0.58;
+      transition: opacity 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .sound-button:hover { opacity: 1; background: rgba(19, 30, 34, 0.38); }
+    .sound-button:active { transform: translateY(1px); }
+    .sound-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+    .sparkle-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 16;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .cheese-spark {
+      position: absolute;
+      width: 16px;
+      height: 11px;
+      border-radius: 4px 8px 4px 7px;
+      background: #f3c85b;
+      box-shadow: inset 4px 2px 0 rgba(255, 248, 189, 0.78), 0 2px 0 rgba(77, 46, 13, 0.22), 0 0 12px rgba(255, 220, 92, 0.50);
+      opacity: 0;
+      animation: cheeseFloat 1600ms ease-out forwards;
+    }
+
+    .cheese-spark::before,
+    .cheese-spark::after {
+      content: "";
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #d18a27;
+    }
+
+    .cheese-spark::before { left: 4px; top: 3px; }
+    .cheese-spark::after { right: 3px; bottom: 2px; }
+
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+
+
+    @keyframes sceneFlash {
+      0% { opacity: 0; transform: scale(0.98); }
+      14% { opacity: 0.95; }
+      48% { opacity: 0.34; }
+      100% { opacity: 0; transform: scale(1.03); }
+    }
+
+    @keyframes cameraPush {
+      0% { transform: scale(1.006) translate3d(0, 0, 0); }
+      100% { transform: scale(1.035) translate3d(0, -0.5%, 0); }
+    }
+
+    @keyframes cameraDriftLeft {
+      0% { transform: scale(1.015) translate3d(0.7%, 0, 0); }
+      100% { transform: scale(1.035) translate3d(-0.7%, -0.4%, 0); }
+    }
+
+    @keyframes cameraDriftRight {
+      0% { transform: scale(1.015) translate3d(-0.7%, 0, 0); }
+      100% { transform: scale(1.035) translate3d(0.7%, -0.4%, 0); }
+    }
+
+    @keyframes cameraSettle {
+      0% { transform: scale(1.035) translate3d(0, -0.6%, 0); }
+      100% { transform: scale(1) translate3d(0, 0, 0); }
+    }
+
+    @keyframes cameraConsultClose {
+      0% { transform: scale(1.012) translate3d(0, 0, 0); }
+      54% { transform: scale(1.055) translate3d(0, -0.8%, 0); }
+      100% { transform: scale(1.025) translate3d(0, -0.2%, 0); }
+    }
+
+    @keyframes pulseRing {
+      0%, 100% { transform: translate(-50%, -50%) scale(0.88); opacity: 0.84; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    }
+
+    @keyframes localizedGlow {
+      0% { opacity: 0.22; transform: translate(-50%, -50%) scale(0.82); filter: hue-rotate(0deg); }
+      100% { opacity: 0.72; transform: translate(-50%, -50%) scale(1.12); filter: hue-rotate(18deg); }
+    }
+
+    @keyframes dispenseTicket {
+      0% { opacity: 0; transform: translate(-50%, -64px) scaleY(0.18); }
+      34% { opacity: 1; transform: translate(-50%, -22px) scaleY(0.64); }
+      76% { opacity: 1; transform: translate(-50%, 0) scaleY(1.04); }
+      100% { opacity: 1; transform: translate(-50%, -4px) scaleY(1); }
+    }
+
+    @keyframes stampThunk {
+      0% { opacity: 0; transform: translate(-50%, -50%) rotate(6deg) scale(1.42); filter: blur(2px); }
+      48% { opacity: 1; transform: translate(-50%, -50%) rotate(-9deg) scale(0.88); filter: blur(0); }
+      72% { transform: translate(-50%, -50%) rotate(-6deg) scale(1.04); }
+      100% { opacity: 1; transform: translate(-50%, -50%) rotate(-7deg) scale(1); }
+    }
+
+    @keyframes cheeseFloat {
+      0% { opacity: 0; transform: translateY(20px) rotate(8deg) scale(0.68); }
+      16% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-98px) rotate(64deg) scale(1.06); }
+    }
+
+    @media (max-width: 760px) {
+      /* Mobile portrait media should fill the phone screen instead of shrinking into a letterboxed card. */
+      .app[data-fit="contain"] .scene-media { object-fit: cover; }
+
+      .intro-plaque {
+        left: 10px;
+        top: 10px;
+        max-width: calc(100vw - 20px);
+        padding: 12px 13px;
+      }
+
+      h1 { font-size: clamp(2rem, 13vw, 3.4rem); }
+      .subtitle { margin: 8px 0 8px; font-size: 0.94rem; }
+      .sacred-phrase { font-size: 0.84rem; }
+
+      .app[data-state="ocean"] .main-hotspot {
+        --hotspot-x: 70%;
+        --hotspot-y: 73%;
+        --label-left: -184px;
+        --label-top: -48px;
+      }
+
+      .app[data-state="machineOff"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 68%;
+        --label-left: -102px;
+        --label-top: 58px;
+      }
+
+      .app[data-state="ready"] .main-hotspot,
+      .app[data-state="unlocked"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 55.5%;
+        --label-left: -96px;
+        --label-top: 58px;
+      }
+
+      .hotspot-label {
+        max-width: 190px;
+        font-size: 0.84rem;
+        text-align: center;
+      }
+
+      .hotspot-sub { font-size: 0.65rem; }
+      .hotspot-label::after { display: none; }
+
+      .energy-gauge {
+        left: 50%;
+        top: 12.5%;
+        width: min(270px, calc(100vw - 24px));
+        transform: translate(-50%, -50%) rotate(-1deg) scale(0.92);
+      }
+
+      .fortune-slip {
+        top: 76.5%;
+        padding: 18px 17px 16px;
+        max-height: min(34svh, 220px);
+      }
+
+      .fortune-slip span { font-size: clamp(0.98rem, 4.2vw, 1.18rem); }
+
+      .approval-stamp {
+        left: 50%;
+        top: 67%;
+        width: min(252px, calc(100vw - 30px));
+      }
+
+      .status-note {
+        left: 10px;
+        right: 10px;
+        bottom: calc(38px + env(safe-area-inset-bottom));
+        max-width: none;
+        border-radius: 14px;
+        font-size: 0.76rem;
+      }
+
+      .sound-button { right: calc(76px + env(safe-area-inset-right)); font-size: 0.72rem; padding-inline: 9px; }
+      .file-note { display: none; }
+    }
+
+
+    @media (hover: none) and (pointer: coarse) {
+      .main-hotspot {
+        width: 68px;
+        height: 68px;
+        min-width: 68px;
+        min-height: 68px;
+      }
+
+      .main-hotspot::before {
+        width: 64px;
+        height: 64px;
+      }
+
+      .reset-button,
+      .sound-button {
+        min-height: 44px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .scene-backdrop {
+        inset: -26px;
+        filter: blur(14px) saturate(1.14) brightness(0.82);
+        opacity: 0.72;
+      }
+
+      .app[data-state="ocean"] .scene-backdrop { opacity: 0.28; }
+
+      .texture-preserver {
+        background:
+          radial-gradient(circle at 50% 45%, transparent 44%, rgba(7, 31, 42, 0.12) 100%),
+          linear-gradient(90deg, rgba(19, 48, 52, 0.09), transparent 30%, transparent 70%, rgba(24, 36, 33, 0.10));
+        opacity: 0.34;
+      }
+
+      .intro-plaque {
+        top: calc(8px + env(safe-area-inset-top));
+        left: 8px;
+        width: calc(100vw - 16px);
+        padding: 10px 11px;
+        border-width: 2px;
+        background: rgba(255, 245, 205, 0.60);
+      }
+
+      .eyebrow { font-size: 0.64rem; margin-bottom: 5px; }
+      h1 { font-size: clamp(1.74rem, 12vw, 3.04rem); text-shadow: 1px 1px 0 var(--gold); }
+      .subtitle { font-size: 0.84rem; line-height: 1.25; }
+      .sacred-phrase { padding: 5px 8px; font-size: 0.76rem; }
+
+      .hotspot-label {
+        background: rgba(255, 242, 194, 0.64);
+        border-width: 2px;
+        box-shadow: 0 8px 14px rgba(10, 12, 16, 0.12), 2px 3px 0 rgba(78, 42, 18, 0.13);
+      }
+
+      .app[data-state="ocean"] .main-hotspot {
+        --hotspot-x: 72%;
+        --hotspot-y: 72%;
+        --label-left: -188px;
+        --label-top: -54px;
+      }
+
+      .app[data-state="machineOff"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 69%;
+        --label-left: -98px;
+        --label-top: 64px;
+      }
+
+      .app[data-state="ready"] .main-hotspot,
+      .app[data-state="unlocked"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 57%;
+        --label-left: -96px;
+        --label-top: 64px;
+      }
+
+      .energy-gauge {
+        top: calc(13px + env(safe-area-inset-top));
+        left: 50%;
+        width: min(232px, calc(100vw - 104px));
+        padding: 8px 9px 9px;
+        border-width: 2px;
+        transform: translate(-50%, 0) rotate(-1deg) scale(0.96);
+      }
+
+      .energy-title { font-size: 0.66rem; margin-bottom: 5px; }
+      .energy-bulbs { gap: 4px; padding: 5px; }
+      .energy-bulbs span { border-width: 1px; }
+
+      .fortune-slip {
+        top: auto;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+        width: calc(100vw - 22px);
+        max-height: min(42svh, 248px);
+        padding: 17px 15px 15px;
+        border-width: 2px;
+        background:
+          radial-gradient(circle at 8% 12%, rgba(122, 70, 28, 0.10), transparent 20%),
+          repeating-linear-gradient(90deg, rgba(122, 70, 28, 0.06) 0 1px, transparent 1px 18px),
+          linear-gradient(180deg, rgba(255, 247, 217, 0.84), rgba(244, 223, 170, 0.78));
+      }
+
+      .fortune-slip strong { font-size: 0.68rem; margin-bottom: 6px; }
+      .fortune-slip span { font-size: clamp(0.98rem, 4.8vw, 1.18rem); line-height: 1.22; }
+
+      .app[data-empty-fortune="false"] .status-note { opacity: 0; }
+
+      .approval-stamp {
+        top: 62%;
+        width: min(232px, calc(100vw - 40px));
+        padding: 12px 12px 13px;
+        background: rgba(255, 246, 215, 0.68);
+      }
+
+      .approval-stamp b { font-size: 0.76rem; }
+      .approval-stamp span { font-size: 0.82rem; }
+
+      .status-note {
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        padding: 7px 9px;
+        background: rgba(18, 31, 34, 0.32);
+        font-size: 0.70rem;
+      }
+
+      .sound-button {
+        right: calc(70px + env(safe-area-inset-right));
+        max-width: 92px;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      .reset-button { right: calc(8px + env(safe-area-inset-right)); }
+      .sound-button, .reset-button { top: calc(8px + env(safe-area-inset-top)); }
+    }
+
+    @media (max-width: 920px) and (orientation: landscape) {
+      .intro-plaque {
+        max-width: 340px;
+        padding: 9px 11px;
+      }
+
+      h1 { font-size: clamp(1.55rem, 6vw, 2.55rem); }
+      .subtitle { display: none; }
+      .sacred-phrase { font-size: 0.74rem; padding: 5px 8px; }
+
+      .app[data-state="ocean"] .main-hotspot {
+        --hotspot-x: 72%;
+        --hotspot-y: 70%;
+        --label-left: -180px;
+        --label-top: -12px;
+      }
+
+      .app[data-state="machineOff"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 69%;
+        --label-left: 62px;
+        --label-top: -12px;
+      }
+
+      .app[data-state="ready"] .main-hotspot,
+      .app[data-state="unlocked"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 57%;
+        --label-left: 62px;
+        --label-top: -12px;
+      }
+
+      .hotspot-label { font-size: 0.76rem; max-width: 176px; }
+      .hotspot-sub { display: none; }
+      .hotspot-label::after { display: block; }
+
+      .energy-gauge {
+        left: calc(50% + min(30vw, 260px));
+        top: 25%;
+        width: 218px;
+        transform: translate(-50%, -50%) rotate(2deg) scale(0.86);
+      }
+
+      .fortune-slip {
+        top: auto;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        width: min(460px, calc(100vw - 28px));
+        max-height: 40svh;
+        padding: 14px 16px 13px;
+      }
+
+      .approval-stamp {
+        left: calc(50% + min(28vw, 235px));
+        top: 68%;
+        transform: translate(-50%, -50%) rotate(-8deg) scale(0.66);
+      }
+
+      .status-note { display: none; }
+    }
+
+    @media (max-height: 560px) {
+      .intro-plaque { max-width: 420px; }
+      .subtitle { display: none; }
+      .fortune-slip { top: 72%; max-height: 42svh; }
+      .energy-gauge { top: 16%; transform: translate(-50%, -50%) rotate(-1deg) scale(0.86); }
+    }
+
+    @media (max-width: 480px) {
+      .app[data-fit="contain"] .scene-media {
+        object-fit: cover;
+        object-position: 50% 50%;
+      }
+
+      .app[data-state="machineOff"] .scene-media,
+      .app[data-state="ready"] .scene-media,
+      .app[data-state="consulting"] .scene-media,
+      .app[data-state="dispensing"] .scene-media,
+      .app[data-state="unlocked"] .scene-media {
+        object-position: 50% 50%;
+      }
+
+      .scene-backdrop {
+        opacity: 0.64;
+        filter: blur(20px) saturate(1.2) brightness(0.82);
+      }
+
+      .intro-plaque {
+        top: calc(8px + env(safe-area-inset-top));
+        left: 8px;
+        max-width: calc(100vw - 16px);
+        padding: 10px 11px;
+        border-width: 2px;
+        border-radius: 15px 18px 14px 18px;
+        background: rgba(255, 245, 205, 0.62);
+      }
+
+      .eyebrow { font-size: 0.64rem; margin-bottom: 5px; }
+      h1 { font-size: clamp(1.72rem, 11.5vw, 2.55rem); }
+      .subtitle { font-size: 0.82rem; line-height: 1.22; margin: 6px 0; }
+      .sacred-phrase { font-size: 0.74rem; padding: 5px 8px; }
+
+      .main-hotspot {
+        width: 66px;
+        height: 66px;
+        min-width: 66px;
+        min-height: 66px;
+      }
+
+      .main-hotspot::before {
+        width: 62px;
+        height: 62px;
+      }
+
+      .app[data-state="ocean"] .main-hotspot {
+        --hotspot-x: 71%;
+        --hotspot-y: 70%;
+        --label-left: -174px;
+        --label-top: -58px;
+      }
+
+      .app[data-state="machineOff"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 69%;
+        --label-left: -91px;
+        --label-top: 62px;
+      }
+
+      .app[data-state="ready"] .main-hotspot,
+      .app[data-state="unlocked"] .main-hotspot {
+        --hotspot-x: 50%;
+        --hotspot-y: 57%;
+        --label-left: -86px;
+        --label-top: 61px;
+      }
+
+      .hotspot-label {
+        max-width: 172px;
+        padding: 8px 9px 7px;
+        border-width: 2px;
+        font-size: 0.76rem;
+        background: rgba(255, 242, 194, 0.66);
+      }
+
+      .hotspot-sub { font-size: 0.58rem; }
+
+      .energy-gauge {
+        top: calc(9.5% + env(safe-area-inset-top));
+        left: 50%;
+        width: min(238px, calc(100vw - 28px));
+        padding: 7px 8px 8px;
+        border-width: 2px;
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.20), transparent 36%), rgba(226, 171, 76, 0.58);
+      }
+
+      .energy-title {
+        font-size: 0.62rem;
+        margin-bottom: 5px;
+      }
+
+      .energy-bulbs { gap: 4px; padding: 4px; }
+      .energy-bulbs span { border-width: 1px; }
+
+      .fortune-slip {
+        top: auto;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+        width: calc(100vw - 20px);
+        max-height: min(36svh, 220px);
+        padding: 14px 13px 13px;
+        border-width: 2px;
+        border-radius: 9px;
+        background:
+          radial-gradient(circle at 8% 12%, rgba(122, 70, 28, 0.10), transparent 20%),
+          repeating-linear-gradient(90deg, rgba(122, 70, 28, 0.07) 0 1px, transparent 1px 18px),
+          linear-gradient(180deg, rgba(255, 247, 217, 0.80), rgba(244, 223, 170, 0.76));
+      }
+
+      .fortune-slip strong {
+        margin-bottom: 5px;
+        font-size: 0.62rem;
+      }
+
+      .fortune-slip span {
+        font-size: clamp(0.9rem, 3.75vw, 1.06rem);
+        line-height: 1.22;
+      }
+
+      .approval-stamp {
+        top: 66%;
+        width: min(222px, calc(100vw - 34px));
+        padding: 11px 12px 12px;
+        border-width: 4px;
+        background: rgba(255, 246, 215, 0.68);
+      }
+
+      .approval-stamp b { font-size: 0.72rem; }
+      .approval-stamp span { font-size: 0.78rem; line-height: 1.16; }
+
+      .sound-button,
+      .reset-button {
+        min-height: 44px;
+        padding-block: 8px;
+        font-size: 0.66rem;
+        background: rgba(19, 30, 34, 0.26);
+      }
+
+      .sound-button { right: calc(75px + env(safe-area-inset-right)); }
+      .reset-button { right: calc(8px + env(safe-area-inset-right)); }
+
+      .app:not([data-state="ocean"]) .status-note {
+        opacity: 0;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 520px) {
+      .intro-plaque {
+        max-width: min(330px, 42vw);
+        padding: 8px 10px;
+      }
+
+      .subtitle,
+      .status-note,
+      .file-note { display: none; }
+
+      h1 { font-size: clamp(1.45rem, 5vw, 2.25rem); }
+      .sacred-phrase { font-size: 0.72rem; padding: 4px 7px; }
+
+      .app[data-fit="contain"] .scene-media { object-fit: contain; }
+
+      .energy-gauge {
+        left: calc(100% - 138px - env(safe-area-inset-right));
+        top: calc(52px + env(safe-area-inset-top));
+        width: 236px;
+        transform: translate(-50%, -50%) rotate(1deg) scale(0.82);
+      }
+
+      .fortune-slip {
+        left: 50%;
+        top: 75%;
+        width: min(440px, calc(100vw - 280px));
+        max-height: 35svh;
+        padding: 11px 13px;
+      }
+
+      .approval-stamp {
+        left: calc(100% - 145px - env(safe-area-inset-right));
+        top: 62%;
+        transform: translate(-50%, -50%) rotate(-8deg) scale(0.82);
+      }
+
+      .app[data-state="machineOff"] .main-hotspot,
+      .app[data-state="ready"] .main-hotspot,
+      .app[data-state="unlocked"] .main-hotspot {
+        --label-left: 58px;
+        --label-top: -12px;
+      }
+
+      .hotspot-label::after { display: block; }
+    }
+
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="oracleApp" class="app" data-state="ocean" data-fit="cover" data-busy="false" data-empty-fortune="true" aria-label="The Nana Cheese Oracle full-screen boardwalk scene">
+    <div id="sceneBackdrop" class="scene-backdrop" aria-hidden="true"></div>
+    <img id="sceneImage" class="scene-media scene-image is-visible" src="assets/img/ocean-poster.jpg" alt="Sunny Florida boardwalk beside blue ocean water.">
+    <video id="sceneVideo" class="scene-media scene-video" muted playsinline webkit-playsinline preload="metadata" poster="assets/img/ocean-poster.jpg"></video>
+    <div class="texture-preserver" aria-hidden="true"></div>
+    <div class="localized-glow" aria-hidden="true"></div>
+    <div id="sceneTransitionFlash" class="scene-transition-flash" aria-hidden="true"></div>
+    <div id="sparkleLayer" class="sparkle-layer" aria-hidden="true"></div>
+
+    <section id="introPlaque" class="intro-plaque" aria-label="Oracle introduction">
+      <p class="eyebrow">A Mother’s Day transmission from Dexter</p>
+      <h1>The Nana Cheese Oracle</h1>
+      <p class="subtitle">Consult Dexter, keeper of cheese wisdom and Nana-related truths.</p>
+      <p class="sacred-phrase">Dexter loves Nana cheese.</p>
+    </section>
+
+    <button id="mainHotspot" class="main-hotspot" type="button" aria-label="Follow the boardwalk">
+      <span id="hotspotLabel" class="hotspot-label" data-arrow="right">
+        <strong>Follow the boardwalk</strong>
+        <span id="hotspotSub" class="hotspot-sub">The machine is pretending not to exist.</span>
+      </span>
+    </button>
+
+    <section id="energyGauge" class="energy-gauge" aria-label="Nana Cheese Energy">
+      <p class="energy-title">Nana Cheese Energy <span id="energyCount" class="energy-count">0 / 7</span></p>
+      <div id="energyBulbs" class="energy-bulbs" role="meter" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0" aria-label="Nana Cheese Energy">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </section>
+
+    <section id="fortuneSlip" class="fortune-slip" aria-live="polite" aria-atomic="true">
+      <strong id="fortuneCategory">Awaiting cheese signal</strong>
+      <span id="fortuneText">No fortune has been dispensed yet.</span>
+    </section>
+
+    <section id="approvalStamp" class="approval-stamp" aria-live="polite" aria-atomic="true" aria-label="Official Dexter Approval Stamp">
+      <b>Official Dexter Approval Stamp</b>
+      <span>Happy Mother’s Day, Nana. Dexter loves you. Dexter loves Nana cheese. The Oracle sees no contradiction.</span>
+    </section>
+
+    <button id="soundButton" class="sound-button" type="button" aria-pressed="true">Sound On</button>
+    <button id="resetButton" class="reset-button" type="button">Reset</button>
+    <p id="statusNote" class="status-note" aria-hidden="true">The boardwalk is quiet. The Oracle is asleep.</p>
+    <p class="file-note">Filed under: urgent cheese affairs.</p>
+    <p id="statusLive" class="visually-hidden" aria-live="polite" aria-atomic="true">The boardwalk is quiet. The Oracle is asleep.</p>
+  </main>
+
+  <noscript>
+    <p style="position:fixed;inset:auto 1rem 1rem;z-index:99;background:#fff2c8;color:#2a2017;padding:1rem;border:2px solid #5e351e;border-radius:12px;max-width:34rem;">The Nana Cheese Oracle requires JavaScript to dispense prophecies. Dexter disapproves of this limitation but acknowledges browser reality.</p>
+  </noscript>
+
+  <script src="assets/data/fortunes.js"></script>
+  <script>
+    (() => {
+      const STATES = {
+        OCEAN: "ocean",
+        APPROACH: "approach",
+        MACHINE_OFF: "machineOff",
+        WAKING: "waking",
+        READY: "ready",
+        CONSULTING: "consulting",
+        DISPENSING: "dispensing",
+        UNLOCKED: "unlocked"
+      };
+
+      const unlockThreshold = 7;
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const fortunes = Array.isArray(window.NANA_CHEESE_FORTUNES) ? window.NANA_CHEESE_FORTUNES : [];
+
+      const MEDIA = {
+        ocean: {
+          type: "video",
+          src: "assets/video/ocean-loop.mp4",
+          poster: "assets/img/ocean-poster.jpg",
+          alt: "Sunny Florida boardwalk beside blue ocean water.",
+          loop: true,
+          fit: "cover",
+          objectPosition: "center center"
+        },
+        approach: {
+          type: "video",
+          src: "assets/video/boardwalk-approach.mp4",
+          poster: "assets/img/ocean-poster.jpg",
+          fallback: "assets/img/machine-off-curtain.jpg",
+          alt: "The boardwalk camera approaches the dormant Nana Cheese Oracle machine.",
+          loop: false,
+          fit: "contain",
+          fallbackMs: 1500,
+          objectPosition: "center center"
+        },
+        machineOff: {
+          type: "image",
+          src: "assets/img/machine-off-curtain.jpg",
+          poster: "assets/img/machine-off-curtain.jpg",
+          alt: "Dormant fortune machine with a purple curtain drawn and no Dexter visible.",
+          fit: "contain",
+          objectPosition: "center center"
+        },
+        wake: {
+          type: "video",
+          src: "assets/video/machine-wake.mp4",
+          poster: "assets/img/machine-off-curtain.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "The Oracle powers on and Dexter appears behind glass.",
+          loop: false,
+          fit: "contain",
+          fallbackMs: 1700,
+          objectPosition: "center center"
+        },
+        ready: {
+          type: "video",
+          src: "assets/video/machine-idle.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "Dexter waits behind the glass of the Nana Cheese Oracle, front-facing and unimpressed.",
+          loop: true,
+          fit: "contain",
+          objectPosition: "center center"
+        },
+        consult: {
+          type: "video",
+          src: "assets/video/machine-consult.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "The Nana Cheese Oracle glows while Dexter consults sacred cheese truth.",
+          loop: false,
+          fit: "contain",
+          fallbackMs: 2600,
+          objectPosition: "center center"
+        }
+      };
+
+
+
+      const CONSULT_VARIANTS = [
+        {
+          src: "assets/video/consult/machine-consult-glow.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "Dexter glows blue behind the glass while consulting the Nana Cheese Oracle.",
+          loop: false,
+          fit: "contain",
+          objectPosition: "center center",
+          fallbackMs: 2500,
+          revealAt: 0.64,
+          camera: "push",
+          weight: 1.3
+        },
+        {
+          src: "assets/video/consult/machine-consult-bulbs.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "The Oracle bulbs flare while Dexter judges the cheese field.",
+          loop: false,
+          fit: "contain",
+          objectPosition: "center center",
+          fallbackMs: 2500,
+          revealAt: 0.68,
+          camera: "drift-left",
+          weight: 1.15
+        },
+        {
+          src: "assets/video/consult/machine-consult-ticket.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "The Oracle produces a fortune ticket from the machine.",
+          loop: false,
+          fit: "contain",
+          objectPosition: "center center",
+          fallbackMs: 3000,
+          revealAt: 0.72,
+          camera: "settle",
+          weight: 1.05
+        },
+        {
+          src: "assets/video/consult/machine-consult-stare.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "Dexter stares from the Oracle booth while the machine thinks.",
+          loop: false,
+          fit: "contain",
+          objectPosition: "center center",
+          fallbackMs: 2500,
+          revealAt: 0.66,
+          camera: "drift-right",
+          weight: 1.0
+        },
+        {
+          src: "assets/video/consult/machine-consult-orbit.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "Dexter turns within the Oracle booth while the lights remain active.",
+          loop: false,
+          fit: "contain",
+          objectPosition: "center center",
+          fallbackMs: 2500,
+          revealAt: 0.65,
+          camera: "drift-left",
+          weight: 0.9
+        },
+        {
+          src: "assets/video/consult/machine-consult-closeup.mp4",
+          poster: "assets/img/machine-on-dexter.jpg",
+          fallback: "assets/img/machine-on-dexter.jpg",
+          alt: "A close view of Dexter and the crystal ball inside the Oracle.",
+          loop: false,
+          fit: "contain",
+          objectPosition: "center center",
+          fallbackMs: 2500,
+          revealAt: 0.70,
+          camera: "consult-close",
+          weight: 0.45
+        }
+      ];
+
+      const state = {
+        phase: STATES.OCEAN,
+        busy: false,
+        consultations: 0,
+        unlocked: false,
+        lastFortuneText: "",
+        usedTexts: new Set(),
+        mediaToken: 0,
+        timers: [],
+        lastConsultVariant: -1,
+        lastCamera: ""
+      };
+
+      const els = {
+        app: document.getElementById("oracleApp"),
+        backdrop: document.getElementById("sceneBackdrop"),
+        sceneImage: document.getElementById("sceneImage"),
+        sceneVideo: document.getElementById("sceneVideo"),
+        transitionFlash: document.getElementById("sceneTransitionFlash"),
+        mainHotspot: document.getElementById("mainHotspot"),
+        hotspotLabel: document.getElementById("hotspotLabel"),
+        hotspotSub: document.getElementById("hotspotSub"),
+        resetButton: document.getElementById("resetButton"),
+        soundButton: document.getElementById("soundButton"),
+        energyBulbs: document.getElementById("energyBulbs"),
+        energyCount: document.getElementById("energyCount"),
+        bulbItems: Array.from(document.querySelectorAll("#energyBulbs span")),
+        fortuneSlip: document.getElementById("fortuneSlip"),
+        fortuneCategory: document.getElementById("fortuneCategory"),
+        fortuneText: document.getElementById("fortuneText"),
+        approvalStamp: document.getElementById("approvalStamp"),
+        statusNote: document.getElementById("statusNote"),
+        statusLive: document.getElementById("statusLive"),
+        sparkleLayer: document.getElementById("sparkleLayer")
+      };
+
+
+
+      const audioProbe = document.createElement("audio");
+      const audioExt = audioProbe.canPlayType('audio/ogg; codecs="vorbis"') ? "ogg" : "mp3";
+      const audioState = {
+        enabled: true,
+        started: false,
+        currentStage: 0,
+        rampFrame: 0,
+        musicPlayers: [],
+        ambience: null
+      };
+
+      const stemStageNames = [
+        "synth",
+        "percussion",
+        "bass",
+        "drums",
+        "guitar",
+        "backing vocals",
+        "lead vocals",
+        "other"
+      ];
+
+      function audioPath(name) {
+        return `assets/audio/${name}.${audioExt}`;
+      }
+
+      function makeAudio(name, loop = false) {
+        const audio = new Audio(audioPath(name));
+        audio.preload = "auto";
+        audio.loop = loop;
+        audio.volume = 0;
+        audio.setAttribute("playsinline", "");
+        return audio;
+      }
+
+      function initAudio() {
+        if (audioState.ambience) return;
+        audioState.ambience = makeAudio("beach-ambience", true);
+        audioState.musicPlayers = Array.from({ length: 8 }, (_, index) => makeAudio(`music-stage-${index}`, true));
+      }
+
+      function desiredMusicVolume(stage) {
+        return audioState.enabled ? clamp(0.18 + stage * 0.032, 0.18, 0.42) : 0;
+      }
+
+      function desiredAmbienceVolume() {
+        return audioState.enabled ? 0.13 : 0;
+      }
+
+      function ensureAudio() {
+        initAudio();
+        if (audioState.started) {
+          applyAudioVolumes(360);
+          return;
+        }
+        audioState.started = true;
+        const startPromises = [];
+        [audioState.ambience, ...audioState.musicPlayers].forEach((audio) => {
+          audio.currentTime = 0;
+          startPromises.push(audio.play().catch(() => null));
+        });
+        Promise.allSettled(startPromises).then(() => applyAudioVolumes(900));
+      }
+
+      function applyAudioVolumes(duration = 900) {
+        initAudio();
+        if (audioState.rampFrame) cancelAnimationFrame(audioState.rampFrame);
+        const start = performance.now();
+        const starts = [audioState.ambience, ...audioState.musicPlayers].map((audio) => audio.volume);
+        const targets = [desiredAmbienceVolume(), ...audioState.musicPlayers.map((_, index) => index === audioState.currentStage ? desiredMusicVolume(index) : 0)];
+        const audios = [audioState.ambience, ...audioState.musicPlayers];
+        function tick(now) {
+          const progress = duration <= 0 ? 1 : clamp((now - start) / duration, 0, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          audios.forEach((audio, index) => {
+            audio.volume = starts[index] + (targets[index] - starts[index]) * eased;
+          });
+          if (progress < 1) audioState.rampFrame = requestAnimationFrame(tick);
+        }
+        audioState.rampFrame = requestAnimationFrame(tick);
+      }
+
+      function setMusicStage(stage, duration = 1200) {
+        audioState.currentStage = clamp(stage, 0, 7);
+        if (audioState.started) applyAudioVolumes(duration);
+      }
+
+      function toggleSound() {
+        audioState.enabled = !audioState.enabled;
+        els.soundButton.setAttribute("aria-pressed", String(audioState.enabled));
+        els.soundButton.textContent = audioState.enabled ? "Sound On" : "Sound Off";
+        if (audioState.enabled) ensureAudio();
+        else applyAudioVolumes(250);
+      }
+
+      function playSfx(name, volume = 0.45) {
+        if (!audioState.enabled || !audioState.started) return;
+        const sfx = makeAudio(name, false);
+        sfx.volume = volume;
+        sfx.play().catch(() => null);
+      }
+
+      function flashScene(x = "50%", y = "56%") {
+        if (prefersReducedMotion) return;
+        els.app.style.setProperty("--flash-x", x);
+        els.app.style.setProperty("--flash-y", y);
+        els.app.classList.remove("is-flashing");
+        void els.transitionFlash.offsetWidth;
+        els.app.classList.add("is-flashing");
+        setTimer(() => els.app.classList.remove("is-flashing"), 560);
+      }
+
+      function setCameraVariant(name = "") {
+        if (prefersReducedMotion) {
+          els.app.dataset.camera = "";
+          return;
+        }
+        state.lastCamera = name || state.lastCamera;
+        els.app.dataset.camera = "";
+        void els.sceneImage.offsetWidth;
+        els.app.dataset.camera = name;
+      }
+
+      function chooseCameraVariant(options = ["push", "drift-left", "drift-right", "settle"]) {
+        const pool = options.filter((item) => item !== state.lastCamera);
+        const choice = pool[Math.floor(Math.random() * pool.length)] || options[0] || "";
+        state.lastCamera = choice;
+        return choice;
+      }
+
+      function chooseConsultVariant() {
+        const candidates = CONSULT_VARIANTS
+          .map((variant, index) => ({ variant, index }))
+          .filter((item) => item.index !== state.lastConsultVariant);
+        const pool = candidates.length ? candidates : CONSULT_VARIANTS.map((variant, index) => ({ variant, index }));
+        const total = pool.reduce((sum, item) => sum + (item.variant.weight || 1), 0);
+        let roll = Math.random() * total;
+        for (const item of pool) {
+          roll -= item.variant.weight || 1;
+          if (roll <= 0) {
+            state.lastConsultVariant = item.index;
+            return item.variant;
+          }
+        }
+        const fallback = pool[0];
+        state.lastConsultVariant = fallback.index;
+        return fallback.variant;
+      }
+
+      function setTimer(callback, ms) {
+        const id = window.setTimeout(() => {
+          state.timers = state.timers.filter((timerId) => timerId !== id);
+          callback();
+        }, ms);
+        state.timers.push(id);
+        return id;
+      }
+
+      function clearTimers() {
+        state.timers.forEach((timerId) => window.clearTimeout(timerId));
+        state.timers = [];
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function setStatus(text) {
+        els.statusNote.textContent = text;
+        els.statusLive.textContent = text;
+      }
+
+      function setBusy(isBusy) {
+        state.busy = isBusy;
+        els.app.dataset.busy = String(isBusy);
+        renderHotspot();
+      }
+
+      function setBackdrop(src) {
+        const safeSrc = src || "assets/img/ocean-poster.jpg";
+        els.backdrop.style.setProperty("--backdrop-image", `url("${safeSrc}")`);
+      }
+
+      function setFit(media) {
+        els.app.dataset.fit = media.fit || "cover";
+        els.app.style.setProperty("--object-position", media.objectPosition || "center center");
+      }
+
+      function stopVideo() {
+        const video = els.sceneVideo;
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+        video.onloadedmetadata = null;
+        video.oncanplay = null;
+        video.onended = null;
+        video.onerror = null;
+        video.classList.remove("is-visible");
+      }
+
+      function showImage(key) {
+        const media = MEDIA[key];
+        if (!media) return;
+        state.mediaToken += 1;
+        stopVideo();
+        setFit(media);
+        const src = media.type === "image" ? media.src : (media.fallback || media.poster || media.src);
+        setBackdrop(media.poster || media.fallback || src);
+        els.sceneImage.src = src;
+        els.sceneImage.alt = media.alt || "The Nana Cheese Oracle scene.";
+        els.sceneImage.classList.add("is-visible");
+      }
+
+      function playSceneVideo(key, options = {}) {
+        const media = typeof key === "string" ? MEDIA[key] : key;
+        const keyName = typeof key === "string" ? key : "consult";
+        if (!media || prefersReducedMotion) {
+          const stillKey = keyName === "ocean" ? "ocean" : keyName === "approach" ? "machineOff" : "ready";
+          showImage(stillKey);
+          if (options.onReady) options.onReady(0);
+          if (options.onEnd) setTimer(options.onEnd, options.reducedMs || media?.fallbackMs || 650);
+          return;
+        }
+
+        const token = ++state.mediaToken;
+        const video = els.sceneVideo;
+        let readyCalled = false;
+        let endedCalled = false;
+        let started = false;
+
+        function safeReady(duration) {
+          if (token !== state.mediaToken || readyCalled) return;
+          readyCalled = true;
+          if (options.onReady) options.onReady(duration || 0);
+        }
+
+        function safeEnd() {
+          if (token !== state.mediaToken || endedCalled) return;
+          endedCalled = true;
+          if (options.onEnd) options.onEnd();
+        }
+
+        function fallback() {
+          if (token !== state.mediaToken) return;
+          video.pause();
+          video.classList.remove("is-visible");
+          els.sceneImage.src = media.fallback || media.poster || "assets/img/machine-on-dexter.jpg";
+          els.sceneImage.alt = media.alt || "The Nana Cheese Oracle scene.";
+          els.sceneImage.classList.add("is-visible");
+          safeReady(0);
+          if (!media.loop && options.onEnd) setTimer(safeEnd, options.fallbackMs || media.fallbackMs || 850);
+        }
+
+        setFit(media);
+        setBackdrop(media.poster || media.fallback || "assets/img/ocean-poster.jpg");
+        els.sceneImage.src = media.poster || media.fallback || "assets/img/ocean-poster.jpg";
+        els.sceneImage.alt = media.alt || "The Nana Cheese Oracle scene.";
+        els.sceneImage.classList.add("is-visible");
+
+        video.pause();
+        video.classList.remove("is-visible");
+        video.loop = Boolean(options.loop ?? media.loop);
+        video.muted = true;
+        video.playsInline = true;
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
+        video.preload = "auto";
+        video.poster = media.poster || "";
+        video.src = media.src;
+
+        video.onloadedmetadata = () => {
+          safeReady(Number.isFinite(video.duration) ? video.duration : 0);
+        };
+
+        video.oncanplay = () => {
+          if (token !== state.mediaToken || started) return;
+          started = true;
+          video.play().then(() => {
+            if (token !== state.mediaToken) return;
+            video.classList.add("is-visible");
+            els.sceneImage.classList.remove("is-visible");
+          }).catch(fallback);
+        };
+
+        video.onended = () => {
+          if (!video.loop) safeEnd();
+        };
+
+        video.onerror = fallback;
+        video.load();
+        setTimer(() => {
+          if (token === state.mediaToken && !started) fallback();
+        }, 2500);
+      }
+
+      function setPhase(phase) {
+        state.phase = phase;
+        els.app.dataset.state = phase;
+        renderHotspot();
+      }
+
+      function renderHotspot() {
+        const phase = state.phase;
+        const isBusy = state.busy;
+        let visible = true;
+        let label = "";
+        let sub = "";
+        let aria = "";
+
+        if (phase === STATES.OCEAN) {
+          label = "Follow the boardwalk";
+          sub = "The machine is pretending not to exist.";
+          aria = "Follow the boardwalk toward the Nana Cheese Oracle";
+        } else if (phase === STATES.MACHINE_OFF) {
+          label = "Insert imaginary cheese coin";
+          sub = "Press here to wake Dexter.";
+          aria = "Insert imaginary cheese coin to wake Dexter";
+        } else if (phase === STATES.READY || phase === STATES.UNLOCKED) {
+          label = phase === STATES.UNLOCKED ? "Consult Dexter again" : "Consult Dexter";
+          sub = "Results may contain cheese bias.";
+          aria = "Consult Dexter for a fortune";
+        } else {
+          visible = false;
+        }
+
+        els.mainHotspot.hidden = !visible;
+        els.mainHotspot.disabled = isBusy || !visible;
+        if (visible) {
+          els.mainHotspot.setAttribute("aria-label", aria);
+          els.hotspotLabel.querySelector("strong").textContent = label;
+          els.hotspotSub.textContent = sub;
+        }
+      }
+
+      function updateGauge() {
+        const count = Math.min(state.consultations, unlockThreshold);
+        els.energyCount.textContent = `${count} / ${unlockThreshold}`;
+        els.energyBulbs.setAttribute("aria-valuenow", String(count));
+        els.bulbItems.forEach((bulb, index) => {
+          bulb.classList.toggle("is-active", index < count);
+        });
+      }
+
+      function weightedType() {
+        const weights = state.unlocked
+          ? { nana: 0.60, andrew: 0.20, florida: 0.20 }
+          : { nana: 0.45, andrew: 0.30, florida: 0.25 };
+        const roll = Math.random();
+        if (roll < weights.nana) return "nana";
+        if (roll < weights.nana + weights.andrew) return "andrew";
+        return "florida";
+      }
+
+      function chooseFortune() {
+        if (!fortunes.length) {
+          return {
+            category: "Oracle Maintenance Notice",
+            type: "nana",
+            rarity: "rare",
+            text: "The fortune bank is missing. Dexter blames Andrew and recommends cheese." 
+          };
+        }
+
+        if (state.usedTexts.size > fortunes.length - 4) state.usedTexts.clear();
+        const preferredType = weightedType();
+        let pool = fortunes.filter((fortune) => fortune.type === preferredType);
+        if (!pool.length) pool = fortunes.slice();
+
+        let candidates = pool.filter((fortune) => fortune.text !== state.lastFortuneText && !state.usedTexts.has(fortune.text));
+        if (!candidates.length) candidates = pool.filter((fortune) => fortune.text !== state.lastFortuneText);
+        if (!candidates.length) candidates = fortunes.filter((fortune) => fortune.text !== state.lastFortuneText);
+        if (!candidates.length) candidates = fortunes.slice();
+
+        const choice = candidates[Math.floor(Math.random() * candidates.length)];
+        state.lastFortuneText = choice.text;
+        state.usedTexts.add(choice.text);
+        return choice;
+      }
+
+      function resetFortuneSlip() {
+        els.app.dataset.emptyFortune = "true";
+        els.fortuneSlip.classList.remove("is-visible");
+        els.fortuneCategory.textContent = "Awaiting cheese signal";
+        els.fortuneText.textContent = "No fortune has been dispensed yet.";
+      }
+
+      function primeFortuneSlip() {
+        els.fortuneSlip.classList.remove("is-visible");
+        void els.fortuneSlip.offsetWidth;
+      }
+
+      function dispenseFortune(fortune) {
+        state.consultations += 1;
+        const justUnlocked = !state.unlocked && state.consultations >= unlockThreshold;
+        if (justUnlocked) state.unlocked = true;
+
+        updateGauge();
+        setMusicStage(Math.min(state.consultations, unlockThreshold), 1450);
+        playSfx("sfx-cheese-coin", 0.28);
+        els.app.dataset.emptyFortune = "false";
+        els.fortuneCategory.textContent = fortune.category;
+        els.fortuneText.textContent = fortune.text;
+        primeFortuneSlip();
+        els.fortuneSlip.classList.add("is-visible");
+        burstCheese();
+
+        const meterCopy = state.unlocked
+          ? "Nana Cheese Energy is full. Dexter approval is active. This is legally binding in tiny-dog court."
+          : `Nana Cheese Energy ${Math.min(state.consultations, unlockThreshold)} of ${unlockThreshold}.`;
+        setStatus(`${fortune.category}: ${fortune.text} ${meterCopy}`);
+
+        if (justUnlocked) {
+          playSfx("sfx-dexter-stamp", 0.42);
+          revealApproval();
+        }
+      }
+
+      function revealApproval() {
+        els.approvalStamp.classList.remove("is-visible");
+        void els.approvalStamp.offsetWidth;
+        els.approvalStamp.classList.add("is-visible");
+      }
+
+      function hideApproval() {
+        els.approvalStamp.classList.remove("is-visible");
+      }
+
+      function burstCheese() {
+        const count = 14;
+        const centerX = window.innerWidth * 0.5;
+        const centerY = window.innerHeight * 0.70;
+        for (let i = 0; i < count; i += 1) {
+          const spark = document.createElement("span");
+          spark.className = "cheese-spark";
+          const offsetX = (Math.random() - 0.5) * Math.min(360, window.innerWidth * 0.38);
+          const offsetY = (Math.random() - 0.5) * 70;
+          spark.style.left = `${centerX + offsetX}px`;
+          spark.style.top = `${centerY + offsetY}px`;
+          spark.style.animationDelay = `${Math.random() * 220}ms`;
+          spark.style.transform = `rotate(${Math.random() * 60 - 30}deg)`;
+          els.sparkleLayer.appendChild(spark);
+          window.setTimeout(() => spark.remove(), 1900);
+        }
+      }
+
+      function enterOcean() {
+        clearTimers();
+        state.unlocked = false;
+        state.consultations = 0;
+        state.lastFortuneText = "";
+        state.usedTexts.clear();
+        updateGauge();
+        resetFortuneSlip();
+        hideApproval();
+        setPhase(STATES.OCEAN);
+        setBusy(false);
+        setStatus("The boardwalk is quiet. The Oracle is asleep.");
+        setCameraVariant("");
+        setMusicStage(0, 800);
+        playSceneVideo("ocean", { loop: true });
+      }
+
+      function startApproach() {
+        if (state.busy) return;
+        clearTimers();
+        ensureAudio();
+        flashScene("62%", "66%");
+        setCameraVariant("push");
+        setPhase(STATES.APPROACH);
+        setBusy(true);
+        setStatus("The boardwalk boards creak. Nana Cheese destiny approaches.");
+        playSceneVideo("approach", {
+          loop: false,
+          onEnd: enterMachineOff,
+          fallbackMs: 1300
+        });
+      }
+
+      function enterMachineOff() {
+        clearTimers();
+        flashScene("50%", "66%");
+        setCameraVariant("settle");
+        setPhase(STATES.MACHINE_OFF);
+        setBusy(false);
+        showImage("machineOff");
+        setStatus("The curtain is drawn. The stinkweasel is not receiving visitors.");
+      }
+
+      function startWake() {
+        if (state.busy) return;
+        clearTimers();
+        ensureAudio();
+        playSfx("sfx-power-up", 0.34);
+        flashScene("50%", "58%");
+        setCameraVariant("push");
+        setMusicStage(0, 700);
+        setPhase(STATES.WAKING);
+        setBusy(true);
+        setStatus("The imaginary cheese coin has been accepted. Dexter is considering whether this is worth his time.");
+        playSceneVideo("wake", {
+          loop: false,
+          onEnd: () => enterReady(),
+          fallbackMs: 1500
+        });
+      }
+
+      function enterReady() {
+        clearTimers();
+        setCameraVariant(chooseCameraVariant(["settle", "drift-left", "drift-right"]));
+        setPhase(state.unlocked ? STATES.UNLOCKED : STATES.READY);
+        setBusy(false);
+        setStatus(state.unlocked
+          ? "Dexter approval is unlocked. The Oracle remains available, because cheese work is never finished."
+          : "Fantastic fortune telling stinkweasel. Cheese-certified.");
+        playSceneVideo("ready", { loop: true });
+      }
+
+      function startConsult() {
+        if (state.busy || (state.phase !== STATES.READY && state.phase !== STATES.UNLOCKED)) return;
+        clearTimers();
+        ensureAudio();
+        const fortune = chooseFortune();
+        const consultVariant = chooseConsultVariant();
+        let revealed = false;
+        let finished = false;
+
+        function reveal() {
+          if (revealed) return;
+          revealed = true;
+          setPhase(STATES.DISPENSING);
+          dispenseFortune(fortune);
+        }
+
+        function finish() {
+          if (finished) return;
+          finished = true;
+          reveal();
+          setTimer(enterReady, 450);
+        }
+
+        primeFortuneSlip();
+        flashScene("50%", "54%");
+        setCameraVariant(consultVariant.camera || chooseCameraVariant());
+        setPhase(STATES.CONSULTING);
+        setBusy(true);
+        setStatus("Dexter is consulting the cheese field. Do not interrupt the tiny judge.");
+
+        playSceneVideo(consultVariant, {
+          loop: false,
+          fallbackMs: 2600,
+          onReady: (duration) => {
+            const durationMs = duration ? duration * 1000 : 3300;
+            setTimer(reveal, clamp(durationMs * (consultVariant.revealAt || 0.68), 1500, 4300));
+          },
+          onEnd: () => setTimer(finish, 260)
+        });
+
+        setTimer(reveal, 4400);
+        setTimer(finish, 7600);
+      }
+
+      function handleHotspotClick() {
+        if (state.phase === STATES.OCEAN) startApproach();
+        else if (state.phase === STATES.MACHINE_OFF) startWake();
+        else if (state.phase === STATES.READY || state.phase === STATES.UNLOCKED) startConsult();
+      }
+
+      els.mainHotspot.addEventListener("click", handleHotspotClick);
+      els.resetButton.addEventListener("click", () => { ensureAudio(); enterOcean(); });
+      els.soundButton.addEventListener("click", toggleSound);
+      document.addEventListener("keydown", (event) => {
+        if (event.key.toLowerCase() === "r" && (event.metaKey || event.ctrlKey)) return;
+        if (event.key.toLowerCase() === "r" && !state.busy) enterOcean();
+      });
+
+      setBackdrop("assets/img/ocean-poster.jpg");
+      updateGauge();
+      renderHotspot();
+      els.soundButton.textContent = audioState.enabled ? "Sound On" : "Sound Off";
+      playSceneVideo("ocean", { loop: true });
+    })();
+  </script>
+</body>
+</html>
